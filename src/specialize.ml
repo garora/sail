@@ -352,7 +352,7 @@ let specialize_id_valspec spec instantiations id ast =
 (* When we specialize a function definition we also need to specialize
    all the types that appear as annotations within the function
    body. *)
-let specialize_annotations instantiation =
+let specialize_annotations instantiation fdef =
   let open Type_check in
   let rw_pat = {
       id_pat_alg with
@@ -364,11 +364,20 @@ let specialize_annotations instantiation =
       lEXP_cast = (fun (typ, lexp) -> LEXP_cast (subst_unifiers instantiation typ, lexp));
       pat_alg = rw_pat
     } in
-  rewrite_fun {
-      rewriters_base with
-      rewrite_exp = (fun _ -> fold_exp rw_exp);
-      rewrite_pat = (fun _ -> fold_pat rw_pat)
-    }
+  let fdef =
+    rewrite_fun {
+        rewriters_base with
+        rewrite_exp = (fun _ -> fold_exp rw_exp);
+        rewrite_pat = (fun _ -> fold_pat rw_pat)
+      } fdef
+  in
+  match fdef with
+  | FD_aux (FD_function (_, _, _, funcls), annot) ->
+     FD_aux (FD_function (Rec_aux (Rec_nonrec, Parse_ast.Unknown),
+                          Typ_annot_opt_aux (Typ_annot_opt_none, Parse_ast.Unknown),
+                          Effect_opt_aux (Effect_opt_pure, Parse_ast.Unknown),
+                          funcls),
+             annot)
 
 let specialize_id_fundef instantiations id ast =
   match split_defs (is_fundef id) ast with
