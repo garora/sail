@@ -212,14 +212,14 @@ void kill_mem()
 
 // ***** Memory builtins *****
 
-bool write_ram(const mpz_t addr_size,     // Either 32 or 64
-	       const mpz_t data_size_mpz, // Number of bytes
-	       const lbits  hex_ram,       // Currently unused
-	       const lbits  addr_bv,
-	       const lbits  data)
+bool write_ram(const sail_int addr_size,     // Either 32 or 64
+	       const sail_int data_size_mpz, // Number of bytes
+	       const lbits hex_ram,          // Currently unused
+	       const lbits addr_bv,
+	       const lbits data)
 {
   uint64_t addr = mpz_get_ui(*addr_bv.bits);
-  uint64_t data_size = mpz_get_ui(data_size_mpz);
+  uint64_t data_size = (uint64_t) data_size_mpz;
 
   mpz_t buf;
   mpz_init_set(buf, *data.bits);
@@ -254,13 +254,13 @@ sbits fast_read_ram(const int64_t data_size,
 }
 
 void read_ram(lbits *data,
-	      const mpz_t addr_size,
-	      const mpz_t data_size_mpz,
+	      const sail_int addr_size,
+	      const sail_int data_size_mpz,
 	      const lbits hex_ram,
 	      const lbits addr_bv)
 {
   uint64_t addr = mpz_get_ui(*addr_bv.bits);
-  uint64_t data_size = mpz_get_ui(data_size_mpz);
+  uint64_t data_size = (uint64_t) data_size_mpz;
 
   mpz_set_ui(*data->bits, 0);
   data->len = data_size * 8;
@@ -329,110 +329,16 @@ void load_image(char *file)
   fclose(fp);
 }
 
-// ***** Tracing support *****
-
-static int64_t g_trace_depth;
-//static int64_t g_trace_max_depth;
-static bool g_trace_enabled;
-
-unit enable_tracing(const unit u)
-{
-  g_trace_depth = 0;
-  g_trace_enabled = true;
-  return UNIT;
-}
-
-unit disable_tracing(const unit u)
-{
-  g_trace_depth = 0;
-  g_trace_enabled = false;
-  return UNIT;
-}
-
-bool is_tracing(const unit u)
-{
-  return g_trace_enabled;
-}
-
-void trace_fbits(const fbits x) {
-  if (g_trace_enabled) fprintf(stderr, "0x%" PRIx64, x);
-}
-
-void trace_unit(const unit u) {
-  if (g_trace_enabled) fputs("()", stderr);
-}
-
-void trace_sail_string(const sail_string str) {
-  if (g_trace_enabled) fputs(str, stderr);
-}
-
-void trace_sail_int(const sail_int op) {
-  if (g_trace_enabled) mpz_out_str(stderr, 10, op);
-}
-
-void trace_lbits(const lbits op) {
-  if (g_trace_enabled) fprint_bits("", op, "", stderr);
-}
-
-void trace_bool(const bool b) {
-  if (g_trace_enabled) {
-    if (b) {
-      fprintf(stderr, "true");
-    } else {
-      fprintf(stderr, "false");
-    }
-  }
-}
-
-void trace_unknown(void) {
-  if (g_trace_enabled) fputs("?", stderr);
-}
-
-void trace_argsep(void) {
-  if (g_trace_enabled) fputs(", ", stderr);
-}
-
-void trace_argend(void) {
-  if (g_trace_enabled) fputs(")\n", stderr);
-}
-
-void trace_retend(void) {
-  if (g_trace_enabled) fputs("\n", stderr);
-}
-
-void trace_start(char *name)
-{
-  if (g_trace_enabled) {
-    fprintf(stderr, "[TRACE] ");
-    for (int64_t i = 0; i < g_trace_depth; ++i) {
-      fprintf(stderr, "%s", "|   ");
-    }
-    fprintf(stderr, "%s(", name);
-    g_trace_depth++;
-  }
-}
-
-void trace_end(void)
-{
-  if (g_trace_enabled) {
-    fprintf(stderr, "[TRACE] ");
-    for (int64_t i = 0; i < g_trace_depth; ++i) {
-      fprintf(stderr, "%s", "|   ");
-    }
-    g_trace_depth--;
-  }
-}
-
 /* ***** ELF functions ***** */
 
-void elf_entry(mpz_t *rop, const unit u)
+sail_int elf_entry(const unit u)
 {
-  mpz_set_ui(*rop, g_elf_entry);
+  return (__int128) g_elf_entry;
 }
 
-void elf_tohost(mpz_t *rop, const unit u)
+sail_int elf_tohost(const unit u)
 {
-  mpz_set_ui(*rop, 0x0ul);
+  return (__int128) 0;
 }
 
 /* ***** Cycle limit ***** */
@@ -452,9 +358,9 @@ unit cycle_count(const unit u)
   return UNIT;
 }
 
-void get_cycle_count(sail_int *rop, const unit u)
+sail_int get_cycle_count(const unit u)
 {
-    mpz_init_set_ui(*rop, g_cycle_count);
+  return (__int128) g_cycle_count;
 }
 
 /* ***** Argument Parsing ***** */
@@ -589,12 +495,11 @@ int process_arguments(int argc, char *argv[])
 
 void setup_rts(void)
 {
-  disable_tracing(UNIT);
-  setup_library();
+  return;
 }
 
 void cleanup_rts(void)
 {
-  cleanup_library();
+  return;
   kill_mem();
 }
